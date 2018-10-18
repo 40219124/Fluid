@@ -7,7 +7,7 @@ public:
 	Force();
 	virtual ~Force();
 
-	virtual glm::vec3 ApplyForce(double dt){}
+	virtual glm::vec3 ApplyForce(double dt) { return glm::vec3(0); }
 };
 
 class LinearForce : public Force {
