@@ -4,7 +4,7 @@
 #include "Transform.h"
 #include "Force.h"
 
-class Body : Transform
+class Body : public Transform
 {
 public:
 	Body();
@@ -21,7 +21,7 @@ public:
 	void AddForce(Force* f) { m_forces.push_back(std::move(f)); }
 	glm::vec3 ApplyForces(double dt, glm::vec3 bodyPos);
 
-private:
+protected:
 	glm::vec3 m_acc;
 	glm::vec3 m_vel;
 	float m_mass;

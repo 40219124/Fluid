@@ -13,6 +13,7 @@ public:
 class LinearForce : public Force {
 public:
 	LinearForce();
+	LinearForce(glm::vec3 dir) { SetForce(dir); }
 	~LinearForce();
 
 	glm::vec3 CalculateForce(double dt, glm::vec3 bodyPos);

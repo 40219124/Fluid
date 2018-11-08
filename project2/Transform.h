@@ -24,10 +24,10 @@ public:
 	void Rotate(float value, const glm::vec3& axis);
 	void Scale(const glm::vec3& scale);
 
-private:
+protected:
 	void updateTransform();
 
-	Mesh m_mesh = Mesh();
+	Mesh m_mesh;
 
 	glm::mat4 m_pos = glm::mat4();
 	glm::mat4 m_rot = glm::mat4();

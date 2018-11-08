@@ -23,6 +23,7 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Transform.h"
+#include "Particle.h"
 
 #include <iostream>
 #include <vector>
@@ -40,11 +41,15 @@ int main()
 	// create application
 	Application app = Application::Application();
 	app.initRender();
-	Application::camera.setCameraPosition(glm::vec3(0.0f, 5.0f, 20.0f));
+	Application::camera.setCameraPosition(glm::vec3(0.0f, 5.0f, 10.0f));
 
 	// Mesh list for rendering
 	vector<Mesh*> meshes;
 
+	Particle p;
+	p.CreateDefault();
+	meshes.push_back(&p.GetMesh());
+	p.SetPos(glm::vec3(0.0f, 10.0f, 0.0f));
 
 	Transform test;
 	test.SetPos(vec3(1.0f, 2.0f, 3.0f));
@@ -107,9 +112,11 @@ int main()
 		accumulator += deltaTime;
 		for (accumulator; accumulator > fixedStep; accumulator -= fixedStep) {
 			// Calculate acceleration
-
+			p.SetAcc(p.ApplyForces(fixedStep, p.GetPos()));
 			// Calculate velocity and translation
-
+			p.SetVel(p.GetVel() + p.GetAcc() * fixedStep);
+			cout << glm::to_string(p.GetVel()) << endl;
+			p.Translate(p.GetVel() * fixedStep);
 			// Calculate collisions/proximities
 
 
