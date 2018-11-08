@@ -16,7 +16,7 @@ Force::~Force()
 LinearForce::LinearForce() {}
 LinearForce::~LinearForce() {}
 
-glm::vec3 LinearForce::ApplyForce(double dt)
+glm::vec3 LinearForce::CalculateForce(double dt)
 {
 	return linearForce * (float)dt;
 }

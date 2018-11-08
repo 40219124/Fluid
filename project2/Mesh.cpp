@@ -21,14 +21,14 @@ Mesh::Mesh()
 	m_numIndices = 3;
 
 	//create mesh
-	initMesh(vertices, normals);
+	InitMesh(vertices, normals);
 }
 
 // create mesh from a .obj file
 Mesh::Mesh(const std::string& fileName)
 {
 	InitMesh(OBJModel(fileName).ToIndexedModel());
-	initTransform();
+	InitTransform();
 }
 
 Mesh::Mesh(MeshType type)
@@ -159,11 +159,11 @@ Mesh::Mesh(MeshType type)
 	
 
 	//create mesh
-	initMesh(vertices, normals);
-	//initMesh(vertices, normals, sizeof(vertices));
+	InitMesh(vertices, normals);
+	//InitMesh(vertices, normals, sizeof(vertices));
 
 	// create model matrix (identity)
-	initTransform();
+	InitTransform();
 }
 
 Mesh::~Mesh()
@@ -176,14 +176,14 @@ Mesh::~Mesh()
 */
 
 // initialise transform matrices to identity
-void Mesh::initTransform() {
+void Mesh::InitTransform() {
 	m_translate = glm::mat4(1.0f);
 	m_rotate = glm::mat4(1.0f);
 	m_scale = glm::mat4(1.0f);
 }
 
 // create mesh from vertices
-void Mesh::initMesh(Vertex* vertices, glm::vec3* normals) {
+void Mesh::InitMesh(Vertex* vertices, glm::vec3* normals) {
 
 	glGenVertexArrays(1, &m_vertexArrayObject);
 	glBindVertexArray(m_vertexArrayObject);
@@ -245,7 +245,7 @@ void Mesh::InitMesh(const IndexedModel& model)
 }
 
 // load .obj file
-void Mesh::loadOBJ(const char * path,
+void Mesh::LoadOBJ(const char * path,
 	std::vector < glm::vec3 > & out_vertices,
 	std::vector < glm::vec2 > & out_uvs,
 	std::vector < glm::vec3 > & out_normals
@@ -324,17 +324,17 @@ void Mesh::loadOBJ(const char * path,
 */
 
 // translate
-void Mesh::translate(const glm::vec3 &vect) {
+void Mesh::Translate(const glm::vec3 &vect) {
 	m_translate = glm::translate(m_translate, vect);
 }
 
 // rotate
-void Mesh::rotate(const float &angle, const glm::vec3 &vect) {
+void Mesh::Rotate(const float &angle, const glm::vec3 &vect) {
 	m_rotate = glm::rotate(m_rotate, angle, vect);
 }
 
 // scale
-void Mesh::scale(const glm::vec3 &vect) {
+void Mesh::Scale(const glm::vec3 &vect) {
 	m_scale = glm::scale(m_scale, vect);
 }
 

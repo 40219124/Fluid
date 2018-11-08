@@ -22,8 +22,12 @@
 #include "Application.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "Transform.h"
 
+#include <iostream>
 
+using namespace std;
+using namespace glm;
 // time
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
@@ -31,11 +35,17 @@ GLfloat lastFrame = 0.0f;
 // main function
 int main()
 {
+	// DON'T WORK WITH OPENGL BEFORE THIS
 	// create application
 	Application app = Application::Application();
 	app.initRender();
 	Application::camera.setCameraPosition(glm::vec3(0.0f, 5.0f, 20.0f));
 			
+
+	Transform test;
+	test.setPos(vec3(1.0f, 2.0f, 3.0f));
+	test.setRot(mat3(1.0f));
+	test.setScale(mat3(1.0f));
 	// create ground plane
 	Mesh plane = Mesh::Mesh(Mesh::QUAD);
 	// scale it up x5
@@ -53,10 +63,10 @@ int main()
 	particle1.setShader(Shader("resources/shaders/solid.vert", "resources/shaders/solid_blue.frag"));
 	
 	// create demo objects (a cube and a sphere)
-	Mesh sphere = Mesh::Mesh("resources/models/sphere.obj");
+	Mesh sphere = Mesh::Mesh(Mesh::CUBE);
 	sphere.translate(glm::vec3(-1.0f, 1.0f, 0.0f));
 	sphere.setShader(lambert);
-	Mesh cube = Mesh::Mesh("resources/models/cube.obj");
+	Mesh cube = Mesh::Mesh(Mesh::CUBE);
 	cube.translate(glm::vec3(1.0f, .5f, 0.0f));
 	cube.setShader(lambert);
 
