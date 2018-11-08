@@ -168,27 +168,27 @@ void Application::clear() {
 // draw mesh
 void Application::draw(const Mesh &mesh)
 {
-	mesh.getShader().Use();
+	mesh.GetShader().Use();
 	// view and projection matrices
 	m_projection = glm::perspective(camera.GetZoom(), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 1000.0f);
 	m_view = camera.GetViewMatrix();
 
 	// Get the uniform locations
-	GLint modelLoc = glGetUniformLocation(mesh.getShader().Program, "model");
-	GLint viewLoc = glGetUniformLocation(mesh.getShader().Program, "view");
-	GLint projLoc = glGetUniformLocation(mesh.getShader().Program, "projection");
-	GLint rotateLoc = glGetUniformLocation(mesh.getShader().Program, "rotate");
+	GLint modelLoc = glGetUniformLocation(mesh.GetShader().Program, "model");
+	GLint viewLoc = glGetUniformLocation(mesh.GetShader().Program, "view");
+	GLint projLoc = glGetUniformLocation(mesh.GetShader().Program, "projection");
+	GLint rotateLoc = glGetUniformLocation(mesh.GetShader().Program, "rotate");
 
 
 	// Pass the matrices to the shader
-	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mesh.getModel()));
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(mesh.GetModel()));
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(m_view));
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(m_projection));
-	glUniformMatrix4fv(rotateLoc, 1, GL_FALSE, glm::value_ptr(mesh.getRotate()));
+	glUniformMatrix4fv(rotateLoc, 1, GL_FALSE, glm::value_ptr(mesh.GetRotate()));
 
 
-	glBindVertexArray(mesh.getVertexArrayObject());
-	glDrawArrays(GL_TRIANGLES, 0, mesh.getNumIndices());
+	glBindVertexArray(mesh.GetVertexArrayObject());
+	glDrawArrays(GL_TRIANGLES, 0, mesh.GetNumIndices());
 	glBindVertexArray(0);
 }
 
