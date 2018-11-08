@@ -25,6 +25,7 @@
 #include "Transform.h"
 
 #include <iostream>
+#include <vector>
 
 using namespace std;
 using namespace glm;
@@ -41,6 +42,9 @@ int main()
 	app.initRender();
 	Application::camera.setCameraPosition(glm::vec3(0.0f, 5.0f, 20.0f));
 
+	// Mesh list for rendering
+	vector<Mesh*> meshes;
+
 
 	Transform test;
 	test.SetPos(vec3(1.0f, 2.0f, 3.0f));
@@ -52,6 +56,7 @@ int main()
 	plane.Scale(glm::vec3(5.0f, 5.0f, 5.0f));
 	Shader lambert = Shader("resources/shaders/physics.vert", "resources/shaders/physics.frag");
 	plane.SetShader(lambert);
+	meshes.push_back(&plane);
 
 
 	// create particle
@@ -61,14 +66,17 @@ int main()
 	particle1.Scale(glm::vec3(.1f, .1f, .1f));
 	particle1.Rotate((GLfloat)M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
 	particle1.SetShader(Shader("resources/shaders/solid.vert", "resources/shaders/solid_blue.frag"));
+	meshes.push_back(&particle1);
 
 	// create demo objects (a cube and a sphere)
 	Mesh sphere = Mesh::Mesh(Mesh::CUBE);
 	sphere.Translate(glm::vec3(-1.0f, 1.0f, 0.0f));
 	sphere.SetShader(lambert);
+	meshes.push_back(&sphere);
 	Mesh cube = Mesh::Mesh(Mesh::CUBE);
 	cube.Translate(glm::vec3(1.0f, .5f, 0.0f));
 	cube.SetShader(lambert);
+	meshes.push_back(&cube);
 
 	// time
 	GLfloat firstFrame = (GLfloat)glfwGetTime();
@@ -98,7 +106,11 @@ int main()
 
 		accumulator += deltaTime;
 		for (accumulator; accumulator > fixedStep; accumulator -= fixedStep) {
-			particle1.Translate(glm::vec3(1.0f, 0.0f, 0.0f) * fixedStep);
+			// Calculate acceleration
+
+			// Calculate velocity and translation
+
+			// Calculate collisions/proximities
 
 
 
@@ -114,14 +126,10 @@ int main()
 		*/
 		// clear buffer
 		app.clear();
-		// draw groud plane
-		app.draw(plane);
-		// draw particles
-		app.draw(particle1);
 
-		// draw demo objects
-		app.draw(cube);
-		app.draw(sphere);
+		for (Mesh* m : meshes) {
+			app.draw(*m);
+		}
 
 		app.display();
 	}

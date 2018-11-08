@@ -40,7 +40,7 @@ void Transform::SetTransform(const glm::mat4& t) {
 	// Set object scale
 	glm::mat3 newScale;
 	for (int i = 0; i < 3; ++i) {
-		newScale[i][i] = glm::length(glm::vec3(m_model[0]));
+		newScale[i][i] = glm::length(glm::vec3(m_model[i]));
 	}
 	SetScale(newScale);
 	// Create 1/m_rot
@@ -52,7 +52,7 @@ void Transform::SetTransform(const glm::mat4& t) {
 		}
 	}
 	// Set object rotation
-	SetRot(glm::mat3(m_model) * iScale);
+	SetRot(m_model * glm::mat4(iScale));
 }
 // Calculate new transform matrix with updated p||r||s
 void Transform::updateTransform() {
@@ -61,13 +61,13 @@ void Transform::updateTransform() {
 
 // Translate method
 void Transform::Translate(const glm::vec3& t) {
-	m_pos += t;
+	m_pos = glm::translate(m_pos, t);
 	updateTransform();
 	m_mesh.Translate(t);
 }
 // Rotate method
 void Transform::Rotate(float value, const glm::vec3& axis) {
-	m_rot = glm::rotate(glm::mat4(m_rot), value, axis);
+	m_rot = glm::rotate(m_rot, value, axis);
 	updateTransform();
 	m_mesh.Rotate(value, axis);
 }
