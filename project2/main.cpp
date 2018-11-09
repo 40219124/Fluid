@@ -45,16 +45,25 @@ int main()
 
 	// Mesh list for rendering
 	vector<Mesh*> meshes;
+	vector<Particle*> parts;
 
-	Particle p;
-	p.CreateDefault();
-	meshes.push_back(&p.GetMesh());
-	p.SetPos(glm::vec3(0.0f, 10.0f, 0.0f));
+	Particle p1;
+	parts.push_back(&p1);
+	p1.CreateDefault();
+	meshes.push_back(&p1.GetMesh());
+	p1.SetPos(glm::vec3(0.0f, 10.0f, 0.0f));
 
-	Transform test;
-	test.SetPos(vec3(1.0f, 2.0f, 3.0f));
-	test.SetRot(mat3(1.0f));
-	test.SetScale(mat3(1.0f));
+	Particle p2;
+	parts.push_back(&p2);
+	p2.CreateDefault();
+	meshes.push_back(&p2.GetMesh());
+	p2.SetPos(glm::vec3(0.5f, 10.0f, 0.0f));
+
+	Cohesive* coh = new Cohesive(&p1, &p2);
+	p1.AddForce(coh);
+	p2.AddForce(coh);
+
+
 	// create ground plane
 	Mesh plane = Mesh::Mesh(Mesh::QUAD);
 	// scale it up x5
@@ -64,24 +73,24 @@ int main()
 	meshes.push_back(&plane);
 
 
-	// create particle
-	Mesh particle1 = Mesh::Mesh(Mesh::QUAD);
-	//scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-	particle1.Translate(glm::vec3(0.0f, 2.5f, 0.0f));
-	particle1.Scale(glm::vec3(.1f, .1f, .1f));
-	particle1.Rotate((GLfloat)M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
-	particle1.SetShader(Shader("resources/shaders/solid.vert", "resources/shaders/solid_blue.frag"));
-	meshes.push_back(&particle1);
+	//// create particle
+	//Mesh particle1 = Mesh::Mesh(Mesh::QUAD);
+	////scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
+	//particle1.Translate(glm::vec3(0.0f, 2.5f, 0.0f));
+	//particle1.Scale(glm::vec3(.1f, .1f, .1f));
+	//particle1.Rotate((GLfloat)M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
+	//particle1.SetShader(Shader("resources/shaders/solid.vert", "resources/shaders/solid_blue.frag"));
+	//meshes.push_back(&particle1);
 
-	// create demo objects (a cube and a sphere)
-	Mesh sphere = Mesh::Mesh(Mesh::CUBE);
-	sphere.Translate(glm::vec3(-1.0f, 1.0f, 0.0f));
-	sphere.SetShader(lambert);
-	meshes.push_back(&sphere);
-	Mesh cube = Mesh::Mesh(Mesh::CUBE);
-	cube.Translate(glm::vec3(1.0f, .5f, 0.0f));
-	cube.SetShader(lambert);
-	meshes.push_back(&cube);
+	//// create demo objects (a cube and a sphere)
+	//Mesh sphere = Mesh::Mesh(Mesh::CUBE);
+	//sphere.Translate(glm::vec3(-1.0f, 1.0f, 0.0f));
+	//sphere.SetShader(lambert);
+	//meshes.push_back(&sphere);
+	//Mesh cube = Mesh::Mesh(Mesh::CUBE);
+	//cube.Translate(glm::vec3(1.0f, .5f, 0.0f));
+	//cube.SetShader(lambert);
+	//meshes.push_back(&cube);
 
 	// time
 	GLfloat firstFrame = (GLfloat)glfwGetTime();
@@ -112,13 +121,21 @@ int main()
 		accumulator += deltaTime;
 		for (accumulator; accumulator > fixedStep; accumulator -= fixedStep) {
 			// Calculate acceleration
-			p.SetAcc(p.ApplyForces(fixedStep, p.GetPos()));
+			for (Particle* p : parts) {
+				p->SetAcc(p->ApplyForces(fixedStep, p->GetPos()));
+			}
 			// Calculate velocity and translation
-			p.SetVel(p.GetVel() + p.GetAcc() * fixedStep);
-			cout << glm::to_string(p.GetVel()) << endl;
-			p.Translate(p.GetVel() * fixedStep);
+			for (Particle* p : parts) {
+				p->SetVel(p->GetVel() + p->GetAcc() * fixedStep);
+				p->Translate(p->GetVel() * fixedStep);
+			}
 			// Calculate collisions/proximities
-
+			for (Particle* p : parts) {
+				if (p->GetPos().y < plane.GetPos().y) {
+					p->SetVel(-p->GetVel() * 0.4f);
+					p->Translate(glm::vec3(0.0f, plane.GetPos().y - p->GetPos().y , 0.0f));
+				}
+			}
 
 
 

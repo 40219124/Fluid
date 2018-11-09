@@ -8,10 +8,10 @@ public:
 	Transform();
 	~Transform();
 	// Get methods
-	glm::vec3& GetPos() { return glm::vec3(m_pos[3]); }
-	glm::mat4& GetRot() { return m_rot; }
-	glm::mat4& GetScale() { return m_scale; }
-	glm::mat4& GetTransform() { return m_model; }
+	glm::vec3 GetPos() { return glm::vec3(m_pos[3]); }
+	glm::mat4 GetRot() { return m_rot; }
+	glm::mat4 GetScale() { return m_scale; }
+	glm::mat4 GetTransform() { return m_model; }
 	Mesh& GetMesh() { return m_mesh; }
 	// Set methods
 	void SetPos(const glm::vec3& p);
