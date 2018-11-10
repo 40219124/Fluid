@@ -3,6 +3,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>  
 #include <random>
+#include <algorithm>
 
 // Std. Includes
 #include <string>
@@ -45,24 +46,38 @@ int main()
 
 	// Mesh list for rendering
 	vector<Mesh*> meshes;
+	// List of fluid particles
 	vector<Particle*> parts;
+	// List of particle bonds
+	vector<Cohesive*> bonds;
+	// List of bonded particle pairs
+	vector<pair<Body*, Body*>> bondPairs;
 
-	Particle p1;
-	parts.push_back(&p1);
-	p1.CreateDefault();
-	meshes.push_back(&p1.GetMesh());
-	p1.SetPos(glm::vec3(0.0f, 10.0f, 0.0f));
+	//Particle p1;
+	//parts.push_back(&p1);
+	//p1.CreateDefault();
+	//meshes.push_back(&p1.GetMesh());
+	//p1.SetPos(glm::vec3(0.0f, 10.0f, 0.0f));
 
-	Particle p2;
-	parts.push_back(&p2);
-	p2.CreateDefault();
-	meshes.push_back(&p2.GetMesh());
-	p2.SetPos(glm::vec3(0.5f, 10.0f, 0.0f));
+	//Particle p2;
+	//parts.push_back(&p2);
+	//p2.CreateDefault();
+	//meshes.push_back(&p2.GetMesh());
+	//p2.SetPos(glm::vec3(0.25f, 12.0f, 0.0f));
 
-	Cohesive* coh = new Cohesive(&p1, &p2);
-	p1.AddForce(coh);
-	p2.AddForce(coh);
+	int cubeSide = 3;
 
+	for (int i = 0; i < cubeSide * cubeSide * cubeSide; ++i) {
+		Particle* ptemp = new Particle();
+		ptemp->CreateDefault();
+		meshes.push_back(&ptemp->GetMesh());
+		parts.push_back(ptemp);
+		ptemp->SetPos(glm::vec3(0.5 * (float)(i % cubeSide),
+			0.5 * (float)((i / cubeSide) % cubeSide),
+			0.5 * (float)((i / cubeSide) / cubeSide)));
+		ptemp->Translate(glm::vec3((float)i * 0.01));
+		ptemp->Translate(glm::vec3(0.0f, 5.0f, 0.0f));
+	}
 
 	// create ground plane
 	Mesh plane = Mesh::Mesh(Mesh::QUAD);
@@ -95,7 +110,7 @@ int main()
 	// time
 	GLfloat firstFrame = (GLfloat)glfwGetTime();
 	GLfloat accumulator = 0.0f;
-	GLfloat fixedStep = 1.0f / 60.0f;
+	GLfloat fixedStep = 1.0f / 30.0f;
 
 	// Game loop
 	while (!glfwWindowShouldClose(app.getWindow()))
@@ -103,7 +118,7 @@ int main()
 		// Set frame time
 		GLfloat currentFrame = (GLfloat)glfwGetTime() - firstFrame;
 		// the animation can be sped up or slowed down by multiplying currentFrame by a factor.
-		currentFrame *= 1.5f;
+		currentFrame *= 1.0f;
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
@@ -129,18 +144,57 @@ int main()
 				p->SetVel(p->GetVel() + p->GetAcc() * fixedStep);
 				p->Translate(p->GetVel() * fixedStep);
 			}
+			// Remove broken cohesive forces
+			for (int coI = 0; coI < bonds.size(); ++coI) {
+				if (bonds[coI]->ToDestroy()) {
+					pair<Body*, Body*> oldPair = bonds[coI]->GetPair();
+					delete bonds[coI];
+					bonds.erase(bonds.begin() + coI);
+					bondPairs.erase(remove(bondPairs.begin(), bondPairs.end(), oldPair));
+					--coI;
+				}
+			}
 			// Calculate collisions/proximities
-			for (Particle* p : parts) {
-				if (p->GetPos().y < plane.GetPos().y) {
-					p->SetVel(-p->GetVel() * 0.4f);
-					p->Translate(glm::vec3(0.0f, plane.GetPos().y - p->GetPos().y , 0.0f));
+			for (int p = 0; p < parts.size(); ++p) {
+				// If particle below the plane, do collision floor response
+				if (parts[p]->GetPos().y < plane.GetPos().y) {
+					// Reverse vel, and dampen
+					glm::vec3 revVel = parts[p]->GetVel();
+					revVel.y *= -0.1;
+					parts[p]->SetVel(revVel);
+					// Account for travelling into ground
+					parts[p]->Translate(glm::vec3(0.0f, plane.GetPos().y - parts[p]->GetPos().y, 0.0f));
+				}
+				// For particles further in the list than this particle
+				for (int fore = p + 1; fore < parts.size(); ++fore) {
+					// Make pair of particles
+					pair<Body*, Body*> thisPair = pair<Body*, Body*>(parts[p], parts[fore]);
+					// Check if bond with this pair exists
+					if (find(bondPairs.begin(), bondPairs.end(), thisPair) != bondPairs.end()) {
+						continue;
+					}
+					// Get the vector between the two particles
+					glm::vec3 diff = parts[fore]->GetPos() - parts[p]->GetPos();
+					// Squared length of vector between particles
+					float diffLen2 = glm::dot(diff, diff);
+					// If lenght is < 2 (sqlen < 4)
+					if (diffLen2 < 4.0f) {
+						// Temporary cohesive force
+						Cohesive* tc = new Cohesive(parts[p], parts[fore]);
+						// Add force to both particles
+						parts[p]->AddForce(tc);
+						parts[fore]->AddForce(tc);
+						// Add force to cohesive list
+						bonds.push_back(tc);
+						// Add pair to bond pair list
+						bondPairs.push_back(thisPair);
+					}
 				}
 			}
 
-
-
 		}
-
+		cout << bonds.size() << ", ";
+		cout << bondPairs.size() << endl;
 		/*
 		**  END FIXED STEP LOOP
 		*/

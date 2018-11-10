@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include <utility>
 
 class Body;
 
@@ -10,6 +11,11 @@ public:
 	virtual ~Force();
 
 	virtual glm::vec3 CalculateForce(double dt, glm::vec3 bodyPos) { return glm::vec3(0); }
+
+	bool ToDestroy() { return m_toDestroy; }
+
+protected:
+	bool m_toDestroy = false;
 };
 
 class LinearForce : public Force {
@@ -34,12 +40,11 @@ public:
 
 	glm::vec3 CalculateForce(double dt, glm::vec3 bodyPos);
 
-	bool Broken() { return m_broken; }
+	std::pair<Body*, Body*> GetPair() { return std::pair<Body*, Body*>(m_body1, m_body2); }
 
 private:
 	Body* m_body1;
 	Body* m_body2;
-
-	bool m_broken = false;
+	float limit = 3.0f;
 };
 
