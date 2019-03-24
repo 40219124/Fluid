@@ -35,6 +35,27 @@ using namespace glm;
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
+// solver consts
+const static vec3 gravity(0.0f, -9.8f, 0.0f);
+const static float REST_DENSITY = 1.0f;		// Resting density
+const static float GAS_CONST = 2.0f;			// For equation of state
+const static float H = 0.5F;					// Particle radius
+const static float H2 = H * H;					// H squared
+const static float MASS = 1.0f;				// Particle mass
+const static float VISC = 5.0f;				// Viscosity 
+
+// Smoothing kernels defined in Muller and their gradients
+const static float POLY6 = 31.50f / (6.50f * M_PI * pow(H, 9.0f));
+const static float SPIKY_GRAD = -4.50f / (M_PI * pow(H, 6.0f));
+const static float VISC_LAP = 4.50f / (M_PI * pow(H, 6.0f));
+
+// Sim parameters
+const static vec3 boundMin = vec3(-5.0f, 0.0f, -5.0f);
+const static vec3 boundMax = vec3(5.0f, 100.0f, 5.0f);
+const static float EPS = H; // Boundary epsilon
+const static float BOUND_DAMPING = -0.5f;
+
+
 // main function
 int main()
 {
@@ -53,19 +74,7 @@ int main()
 	// List of bonded particle pairs
 	vector<pair<Body*, Body*>> bondPairs;
 
-	//Particle p1;
-	//parts.push_back(&p1);
-	//p1.CreateDefault();
-	//meshes.push_back(&p1.GetMesh());
-	//p1.SetPos(glm::vec3(0.0f, 10.0f, 0.0f));
-
-	//Particle p2;
-	//parts.push_back(&p2);
-	//p2.CreateDefault();
-	//meshes.push_back(&p2.GetMesh());
-	//p2.SetPos(glm::vec3(0.25f, 12.0f, 0.0f));
-
-	int cubeSide = 3;
+	int cubeSide = 5;
 
 	for (int i = 0; i < cubeSide * cubeSide * cubeSide; ++i) {
 		Particle* ptemp = new Particle();
@@ -87,30 +96,20 @@ int main()
 	plane.SetShader(lambert);
 	meshes.push_back(&plane);
 
-
-	//// create particle
-	//Mesh particle1 = Mesh::Mesh(Mesh::QUAD);
-	////scale it down (x.1), translate it up by 2.5 and rotate it by 90 degrees around the x axis
-	//particle1.Translate(glm::vec3(0.0f, 2.5f, 0.0f));
-	//particle1.Scale(glm::vec3(.1f, .1f, .1f));
-	//particle1.Rotate((GLfloat)M_PI_2, glm::vec3(1.0f, 0.0f, 0.0f));
-	//particle1.SetShader(Shader("resources/shaders/solid.vert", "resources/shaders/solid_blue.frag"));
-	//meshes.push_back(&particle1);
-
-	//// create demo objects (a cube and a sphere)
-	//Mesh sphere = Mesh::Mesh(Mesh::CUBE);
-	//sphere.Translate(glm::vec3(-1.0f, 1.0f, 0.0f));
-	//sphere.SetShader(lambert);
-	//meshes.push_back(&sphere);
-	//Mesh cube = Mesh::Mesh(Mesh::CUBE);
-	//cube.Translate(glm::vec3(1.0f, .5f, 0.0f));
-	//cube.SetShader(lambert);
-	//meshes.push_back(&cube);
-
 	// time
 	GLfloat firstFrame = (GLfloat)glfwGetTime();
 	GLfloat accumulator = 0.0f;
 	GLfloat fixedStep = 1.0f / 30.0f;
+	bool paused = true;
+	bool keyHeld = false;
+
+
+
+	// InitSPH
+	// Update
+	//// ComputeDensityPressure
+	//// ComputeForces
+	//// Integrate
 
 	// Game loop
 	while (!glfwWindowShouldClose(app.getWindow()))
@@ -127,74 +126,91 @@ int main()
 		*/
 		// Manage interaction
 		app.doMovement(deltaTime);
+		if (!keyHeld && glfwGetKey(app.getWindow(), GLFW_KEY_P) == GLFW_PRESS) {
+			paused = !paused;
+			keyHeld = true;
+		}
+		else if (keyHeld && glfwGetKey(app.getWindow(), GLFW_KEY_P) == GLFW_RELEASE) {
+			keyHeld = false;
+		}
+
+
 
 
 		/*
 		**	START FIXED STEP LOOP
 		*/
+		if (!paused) {
+			accumulator += deltaTime;
+			for (accumulator; accumulator > fixedStep; accumulator -= fixedStep) {
 
-		accumulator += deltaTime;
-		for (accumulator; accumulator > fixedStep; accumulator -= fixedStep) {
-			// Calculate acceleration
-			for (Particle* p : parts) {
-				p->SetAcc(p->ApplyForces(fixedStep, p->GetPos()));
-			}
-			// Calculate velocity and translation
-			for (Particle* p : parts) {
-				p->SetVel(p->GetVel() + p->GetAcc() * fixedStep);
-				p->Translate(p->GetVel() * fixedStep);
-			}
-			// Remove broken cohesive forces
-			for (int coI = 0; coI < bonds.size(); ++coI) {
-				if (bonds[coI]->ToDestroy()) {
-					pair<Body*, Body*> oldPair = bonds[coI]->GetPair();
-					delete bonds[coI];
-					bonds.erase(bonds.begin() + coI);
-					bondPairs.erase(remove(bondPairs.begin(), bondPairs.end(), oldPair));
-					--coI;
-				}
-			}
-			// Calculate collisions/proximities
-			for (int p = 0; p < parts.size(); ++p) {
-				// If particle below the plane, do collision floor response
-				if (parts[p]->GetPos().y < plane.GetPos().y) {
-					// Reverse vel, and dampen
-					glm::vec3 revVel = parts[p]->GetVel();
-					revVel.y *= -0.1;
-					parts[p]->SetVel(revVel);
-					// Account for travelling into ground
-					parts[p]->Translate(glm::vec3(0.0f, plane.GetPos().y - parts[p]->GetPos().y, 0.0f));
-				}
-				// For particles further in the list than this particle
-				for (int fore = p + 1; fore < parts.size(); ++fore) {
-					// Make pair of particles
-					pair<Body*, Body*> thisPair = pair<Body*, Body*>(parts[p], parts[fore]);
-					// Check if bond with this pair exists
-					if (find(bondPairs.begin(), bondPairs.end(), thisPair) != bondPairs.end()) {
-						continue;
-					}
-					// Get the vector between the two particles
-					glm::vec3 diff = parts[fore]->GetPos() - parts[p]->GetPos();
-					// Squared length of vector between particles
-					float diffLen2 = glm::dot(diff, diff);
-					// If lenght is < 2 (sqlen < 4)
-					if (diffLen2 < 4.0f) {
-						// Temporary cohesive force
-						Cohesive* tc = new Cohesive(parts[p], parts[fore]);
-						// Add force to both particles
-						parts[p]->AddForce(tc);
-						parts[fore]->AddForce(tc);
-						// Add force to cohesive list
-						bonds.push_back(tc);
-						// Add pair to bond pair list
-						bondPairs.push_back(thisPair);
-					}
-				}
-			}
+				// ComputeDensityPressure-----------------------------------------------------
+				for (Particle* p1 : parts) {
+					p1->SetDensity(0.0f);
+					for (Particle* p2 : parts) {
+						vec2 diff = p2->GetPos() - p1->GetPos();
+						float len2 = dot(diff, diff);
 
+						if (len2 < H2) { // less than H^2, smoothing radius of support
+							p1->SetDensity(p1->GetDensity() + MASS * POLY6 * powf(H2 - len2, 3.0f));
+						}
+					}
+					p1->SetPressure(GAS_CONST * (p1->GetDensity() - REST_DENSITY));
+				}
+
+				// ComputeForces----------------------------------------------------------------
+
+				for (Particle* p1 : parts) {
+					vec3 fpress(0.0f);
+					vec3 fvisc(0.0f);
+					for (Particle* p2 : parts) {
+						if (p1 == p2) {
+							continue;
+						}
+
+						vec3 diff = p2->GetPos() - p1->GetPos();
+						float len = (diff == vec3(0.0f) ? 0.0f : sqrtf(dot(diff, diff)));
+
+						if (len < H) { // less than H
+							// pressure force
+							fpress += -glm::normalize(diff) * MASS * (p1->GetPos() + p2->GetPos()) / (2.0f * p2->GetDensity()) * SPIKY_GRAD * pow(H - len, 2.0f);
+							// viscosity force
+							fvisc += VISC * MASS * (p2->GetVel() - p1->GetVel()) / p2->GetDensity() * VISC_LAP * (H - len);
+						}
+					}
+					vec3 fgrav = gravity * p1->GetDensity();
+					p1->SetForce(fpress + fvisc + fgrav);
+				}
+
+				// Integrate--------------------------------------------------------------------
+
+				for (Particle* p : parts) {
+					// Forward Euler
+					p->SetVel(p->GetVel() + fixedStep * p->GetForce() / p->GetDensity());
+					p->Translate(fixedStep * p->GetVel());
+					// Boundaries
+					for (int i = 0; i < 3; i++) {
+						if (p->GetPos()[i] < boundMin[i] + H) {
+							vec3 velChange = p->GetVel();
+							velChange[i] *= BOUND_DAMPING;
+							p->SetVel(velChange);
+							vec3 posChange = p->GetPos();
+							posChange[i] = boundMin[i] + H;
+							p->SetPos(posChange);
+						}
+						if (p->GetPos()[i] > boundMax[i] - H) {
+							vec3 velChange = p->GetVel();
+							velChange[i] *= BOUND_DAMPING;
+							p->SetVel(velChange);
+							vec3 posChange = p->GetPos();
+							posChange[i] = boundMax[i] - H;
+							p->SetPos(posChange);
+						}
+					}
+				}
+			}
 		}
-		cout << bonds.size() << ", ";
-		cout << bondPairs.size() << endl;
+
 		/*
 		**  END FIXED STEP LOOP
 		*/
@@ -214,6 +230,6 @@ int main()
 
 	app.terminate();
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
