@@ -36,22 +36,31 @@ GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
 // solver consts
+//const static vec3 gravity(0.0f, -9.8f, 0.0f);
+//const static float REST_DENSITY = 10.10000f;		// Resting density
+//const static float GAS_CONST = 100.20000f;			// For equation of state
+//const static float H = 0.5f;					// Particle radius
+//const static float H2 = H * H;					// H squared
+//const static float MASS = 0.065f;				// Particle mass
+//const static float VISC = 02.025f;				// Viscosity 
 const static vec3 gravity(0.0f, -9.8f, 0.0f);
-const static float REST_DENSITY = 1.0f;		// Resting density
-const static float GAS_CONST = 2.0f;			// For equation of state
-const static float H = 0.5F;					// Particle radius
+const static float REST_DENSITY = 1000.0f;		// Resting density
+const static float GAS_CONST = 200.0f;			// For equation of state
+const static float H = 0.5f;					// Particle radius
 const static float H2 = H * H;					// H squared
-const static float MASS = 1.0f;				// Particle mass
-const static float VISC = 5.0f;				// Viscosity 
+const static float MASS = 6.0f;				// Particle mass
+const static float VISC = 25.0f;				// Viscosity 
 
 // Smoothing kernels defined in Muller and their gradients
-const static float POLY6 = 31.50f / (6.50f * M_PI * pow(H, 9.0f));
-const static float SPIKY_GRAD = -4.50f / (M_PI * pow(H, 6.0f));
-const static float VISC_LAP = 4.50f / (M_PI * pow(H, 6.0f));
+const static float POLY6 = 315.0f / (64.0f * M_PI * pow(H, 9.0f));
+const static float SPIKY_GRAD = -45.0f / (M_PI * pow(H, 6.0f));
+const static float VISC_LAP = 45.0f / ( M_PI * pow(H, 6.0f));
 
 // Sim parameters
-const static vec3 boundMin = vec3(-5.0f, 0.0f, -5.0f);
-const static vec3 boundMax = vec3(5.0f, 100.0f, 5.0f);
+const static int cubeSide = 7;
+const static float boundWidth = H * ((float)cubeSide * 1.1f);
+const static vec3 boundMin = vec3(-boundWidth, 0.0f, -boundWidth);
+const static vec3 boundMax = vec3(boundWidth, 100.0f, boundWidth);
 const static float EPS = H; // Boundary epsilon
 const static float BOUND_DAMPING = -0.5f;
 
@@ -73,17 +82,15 @@ int main()
 	vector<Cohesive*> bonds;
 	// List of bonded particle pairs
 	vector<pair<Body*, Body*>> bondPairs;
-
-	int cubeSide = 5;
-
+	
 	for (int i = 0; i < cubeSide * cubeSide * cubeSide; ++i) {
 		Particle* ptemp = new Particle();
 		ptemp->CreateDefault();
 		meshes.push_back(&ptemp->GetMesh());
 		parts.push_back(ptemp);
-		ptemp->SetPos(glm::vec3(0.5 * (float)(i % cubeSide),
-			0.5 * (float)((i / cubeSide) % cubeSide),
-			0.5 * (float)((i / cubeSide) / cubeSide)));
+		ptemp->SetPos(glm::vec3(boundMin[0]+ H * (float)(i % cubeSide),
+			H * (float)((i / cubeSide) % cubeSide),
+			boundMin[2] + H * (float)((i / cubeSide) / cubeSide)));
 		ptemp->Translate(glm::vec3((float)i * 0.01));
 		ptemp->Translate(glm::vec3(0.0f, 5.0f, 0.0f));
 	}
@@ -99,7 +106,7 @@ int main()
 	// time
 	GLfloat firstFrame = (GLfloat)glfwGetTime();
 	GLfloat accumulator = 0.0f;
-	GLfloat fixedStep = 1.0f / 30.0f;
+	GLfloat fixedStep = 1.0f / 200.0f;
 	bool paused = true;
 	bool keyHeld = false;
 
@@ -148,7 +155,7 @@ int main()
 				for (Particle* p1 : parts) {
 					p1->SetDensity(0.0f);
 					for (Particle* p2 : parts) {
-						vec2 diff = p2->GetPos() - p1->GetPos();
+						vec3 diff = p2->GetPos() - p1->GetPos();
 						float len2 = dot(diff, diff);
 
 						if (len2 < H2) { // less than H^2, smoothing radius of support
@@ -169,11 +176,11 @@ int main()
 						}
 
 						vec3 diff = p2->GetPos() - p1->GetPos();
-						float len = (diff == vec3(0.0f) ? 0.0f : sqrtf(dot(diff, diff)));
+						float len = sqrtf(dot(diff, diff));
 
 						if (len < H) { // less than H
 							// pressure force
-							fpress += -glm::normalize(diff) * MASS * (p1->GetPos() + p2->GetPos()) / (2.0f * p2->GetDensity()) * SPIKY_GRAD * pow(H - len, 2.0f);
+							fpress += -glm::normalize(diff) * MASS * (p1->GetPressure() + p2->GetPressure()) / (2.0f * p2->GetDensity()) * SPIKY_GRAD * pow(H - len, 2.0f);
 							// viscosity force
 							fvisc += VISC * MASS * (p2->GetVel() - p1->GetVel()) / p2->GetDensity() * VISC_LAP * (H - len);
 						}
@@ -214,6 +221,21 @@ int main()
 		/*
 		**  END FIXED STEP LOOP
 		*/
+		static bool add = true;
+		if (add && currentFrame >= 10.0f) {
+			add = false;
+			for (int i = 0; i < pow(4, 3); ++i) {
+				Particle* ptemp = new Particle();
+				ptemp->CreateDefault();
+				meshes.push_back(&ptemp->GetMesh());
+				parts.push_back(ptemp);
+				ptemp->SetPos(glm::vec3(boundMin[0] + H + H * (float)(i % cubeSide),
+					H * (float)((i / cubeSide) % cubeSide),
+					boundMin[2] + H + H * (float)((i / cubeSide) / cubeSide)));
+				ptemp->Translate(glm::vec3((float)i * 0.01));
+				ptemp->Translate(glm::vec3(0.0f, 5.0f, 0.0f));
+			}
+		}
 
 		/*
 		**	RENDER
