@@ -44,8 +44,8 @@ GLfloat lastFrame = 0.0f;
 //const static float MASS = 0.065f;				// Particle mass
 //const static float VISC = 02.025f;				// Viscosity 
 const static vec3 gravity(0.0f, -9.8f, 0.0f);
-const static float REST_DENSITY = 1000.0f;		// Resting density
-const static float GAS_CONST = 200.0f;			// For equation of state
+const static float REST_DENSITY = 900.0f;		// Resting density
+const static float GAS_CONST = 300.0f;			// For equation of state
 const static float H = 0.5f;					// Particle radius
 const static float H2 = H * H;					// H squared
 const static float MASS = 6.0f;				// Particle mass
@@ -57,8 +57,8 @@ const static float SPIKY_GRAD = -45.0f / (M_PI * pow(H, 6.0f));
 const static float VISC_LAP = 45.0f / ( M_PI * pow(H, 6.0f));
 
 // Sim parameters
-const static int cubeSide = 7;
-const static float boundWidth = H * ((float)cubeSide * 1.1f);
+const static int cubeSide = 6;
+const static float boundWidth = H * ((float)cubeSide + 1.0f);
 const static vec3 boundMin = vec3(-boundWidth, 0.0f, -boundWidth);
 const static vec3 boundMax = vec3(boundWidth, 100.0f, boundWidth);
 const static float EPS = H; // Boundary epsilon
@@ -83,22 +83,22 @@ int main()
 	// List of bonded particle pairs
 	vector<pair<Body*, Body*>> bondPairs;
 	
-	for (int i = 0; i < cubeSide * cubeSide * cubeSide; ++i) {
+	for (int i = 0; i < cubeSide * cubeSide * (cubeSide * 2); ++i) {
 		Particle* ptemp = new Particle();
 		ptemp->CreateDefault();
 		meshes.push_back(&ptemp->GetMesh());
 		parts.push_back(ptemp);
-		ptemp->SetPos(glm::vec3(boundMin[0]+ H * (float)(i % cubeSide),
-			H * (float)((i / cubeSide) % cubeSide),
-			boundMin[2] + H * (float)((i / cubeSide) / cubeSide)));
-		ptemp->Translate(glm::vec3((float)i * 0.01));
-		ptemp->Translate(glm::vec3(0.0f, 5.0f, 0.0f));
+		ptemp->SetPos(glm::vec3(boundMin[0] + H + H * (float)(i % cubeSide),
+			H + H * (float)((i / cubeSide) % cubeSide),
+			boundMin[2] + H + H * (float)((i / cubeSide) / cubeSide)));
+		ptemp->Translate(glm::vec3((float)i * 0.001));
+		//ptemp->Translate(glm::vec3(0.0f, 5.0f, 0.0f));
 	}
 
 	// create ground plane
 	Mesh plane = Mesh::Mesh(Mesh::QUAD);
 	// scale it up x5
-	plane.Scale(glm::vec3(5.0f, 5.0f, 5.0f));
+	plane.Scale(glm::vec3(boundWidth));
 	Shader lambert = Shader("resources/shaders/physics.vert", "resources/shaders/physics.frag");
 	plane.SetShader(lambert);
 	meshes.push_back(&plane);
@@ -221,10 +221,10 @@ int main()
 		/*
 		**  END FIXED STEP LOOP
 		*/
-		static bool add = true;
+		static bool add = false;
 		if (add && currentFrame >= 10.0f) {
 			add = false;
-			for (int i = 0; i < pow(4, 3); ++i) {
+			for (int i = 0; i < pow(3, 3); ++i) {
 				Particle* ptemp = new Particle();
 				ptemp->CreateDefault();
 				meshes.push_back(&ptemp->GetMesh());
